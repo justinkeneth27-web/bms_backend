@@ -1,0 +1,549 @@
+================================================================================
+BARANGAY DRRM CONSOLE - LARAVEL 11 + POSTGRESQL COMMANDS CHEAT SHEET & GUIDE
+================================================================================
+Target System: Laravel 11 Backend + PostgreSQL 18 + React 19 Frontend
+Timezone: Asia/Manila (UTC+8)
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. DATABASE CONNECTION PARAMETERS & CONFIGURATION PATHS
+2. ALL POSTGRESQL DATABASE TABLES & SCHEMA DIRECTORY
+3. HOW TO VIEW DATABASE NAME & TABLES USING COMMANDS
+4. WORKING DIRECTORIES (IMPORTANT RULE)
+5. HOW TO RUN PSQL ON WINDOWS
+6. DATABASE MIGRATIONS & SEEDING COMMANDS
+7. HOUSEHOLD CRUD GUIDE (CREATE, READ, UPDATE, DELETE)
+8. EVACUATION CENTER CRUD COMMANDS
+9. RELIEF GOODS DISTRIBUTION CRUD COMMANDS
+10. OFFICIAL ACCOUNTS & AUTHENTICATION
+11. OPERATIONAL ACTIVITY & AUDIT LOGS
+12. QUICK ONE-LINE POWERSHELL COMMANDS
+13. SYSTEM MAINTENANCE & CACHE CLEARING COMMANDS
+
+================================================================================
+1. DATABASE CONNECTION PARAMETERS & CONFIGURATION PATHS
+================================================================================
+
+--- PostgreSQL Connection Parameters ---
+Database Type:       PostgreSQL (driver: pgsql)
+Host Server:         127.0.0.1 (localhost)
+Port:                5432
+Database Name:       barangay_drrm
+Database Username:   postgres
+Database Password:   admin
+Timezone:            Asia/Manila (UTC+8)
+
+--- Configuration File Paths on Your System ---
+1. Project Root Environment File:
+   c:\Users\King\Veryupdated thesis\.env
+
+2. Laravel Backend Environment File:
+   c:\Users\King\Veryupdated thesis\laravel-backend\.env
+
+3. Raw PostgreSQL Schema File (SQL):
+   c:\Users\King\Veryupdated thesis\laravel-backend\database\schema.sql
+
+4. Laravel Database Migrations Folder:
+   c:\Users\King\Veryupdated thesis\laravel-backend\database\migrations\
+   - 2026_01_01_000001_create_official_accounts_table.php
+   - 2026_01_01_000002_create_evacuation_centers_table.php
+   - 2026_01_01_000003_create_households_table.php
+   - 2026_01_01_000004_create_relief_distributions_table.php
+   - 2026_01_01_000005_create_activity_logs_table.php
+   - 2026_10_07_104236_create_personal_access_tokens_table.php
+
+5. Laravel Database Seeders:
+   c:\Users\King\Veryupdated thesis\laravel-backend\database\seeders\DatabaseSeeder.php
+
+6. Laravel Eloquent Models Folder:
+   c:\Users\King\Veryupdated thesis\laravel-backend\app\Models\
+   - Household.php           -> Table: households
+   - EvacuationCenter.php    -> Table: evacuation_centers
+   - ReliefDistribution.php -> Table: relief_distributions
+   - OfficialAccount.php     -> Table: official_accounts
+   - ActivityLog.php         -> Table: activity_logs
+
+7. PostgreSQL Executable Path (Windows):
+   C:\Program Files\PostgreSQL\18\bin\psql.exe
+
+
+================================================================================
+2. ALL POSTGRESQL DATABASE TABLES & SCHEMA DIRECTORY
+================================================================================
+The "barangay_drrm" database contains 7 public tables:
+
+--------------------------------------------------------------------------------
+TABLE 1: households
+Model:   App\Models\Household
+Purpose: Masterlist of registered households, alert statuses, family members.
+Columns:
+  * id                    VARCHAR(50) PRIMARY KEY (e.g., 'hh-buang-1')
+  * head_of_family        VARCHAR(150) NOT NULL
+  * birthday              DATE NULL
+  * age                   INTEGER NOT NULL
+  * contact_number        VARCHAR(50) NOT NULL
+  * number_of_members     INTEGER NOT NULL DEFAULT 1
+  * house_number          VARCHAR(50) NULL
+  * purok                 VARCHAR(50) NOT NULL
+  * barangay              VARCHAR(50) NOT NULL ('Buang' or 'Nagsipit')
+  * complete_address      TEXT NOT NULL
+  * location              JSONB NOT NULL DEFAULT '{"lat": 0.0, "lng": 0.0}'
+  * status                VARCHAR(20) NOT NULL ('SAFE', 'MODERATE', 'EMERGENCY')
+  * status_note           TEXT NULL
+  * evacuation_center_id  VARCHAR(50) NULL (FK -> evacuation_centers.id)
+  * verification_status   VARCHAR(20) NOT NULL ('Pending' or 'Verified')
+  * special_needs         JSONB NOT NULL DEFAULT '[]' (Senior, Infant, PWD, Pregnant)
+  * family_members        JSONB NOT NULL DEFAULT '[]' (Array of family member objects)
+  * last_status_update    TIMESTAMP WITH TIME ZONE
+  * created_at            TIMESTAMP WITH TIME ZONE
+  * updated_at            TIMESTAMP WITH TIME ZONE
+
+--------------------------------------------------------------------------------
+TABLE 2: evacuation_centers
+Model:   App\Models\EvacuationCenter
+Purpose: Designated disaster evacuation sites, live capacities and facilities.
+Columns:
+  * id                    VARCHAR(50) PRIMARY KEY (e.g., 'center-buang-1')
+  * name                  VARCHAR(150) NOT NULL
+  * barangay              VARCHAR(50) NOT NULL ('Buang' or 'Nagsipit')
+  * purok                 VARCHAR(50) NOT NULL
+  * capacity_families     INTEGER NOT NULL DEFAULT 0
+  * assigned_count        INTEGER NOT NULL DEFAULT 0
+  * location              JSONB NOT NULL DEFAULT '{"lat": 0.0, "lng": 0.0}'
+  * manager_name          VARCHAR(150) NOT NULL
+  * manager_contact       VARCHAR(50) NOT NULL
+  * status                VARCHAR(20) NOT NULL ('Open', 'Full', 'Standby')
+  * facilities            JSONB NOT NULL DEFAULT '[]' (Generator, Clean Water, etc.)
+  * created_at            TIMESTAMP WITH TIME ZONE
+  * updated_at            TIMESTAMP WITH TIME ZONE
+
+--------------------------------------------------------------------------------
+TABLE 3: relief_distributions
+Model:   App\Models\ReliefDistribution
+Purpose: Disaster goods, food packs, and relief supply distribution records.
+Columns:
+  * id                    VARCHAR(50) PRIMARY KEY (e.g., 'relief-6705...')
+  * household_id          VARCHAR(50) NOT NULL (FK -> households.id)
+  * recipient_name        VARCHAR(150) NOT NULL
+  * barangay              VARCHAR(50) NOT NULL ('Buang' or 'Nagsipit')
+  * purok                 VARCHAR(50) NOT NULL
+  * item                  VARCHAR(150) NOT NULL
+  * qty                   VARCHAR(50) NOT NULL
+  * location              VARCHAR(150) NOT NULL
+  * distributed_at        TIMESTAMP WITH TIME ZONE
+  * officer_name          VARCHAR(150) NOT NULL
+  * notes                 TEXT NULL
+  * created_at            TIMESTAMP WITH TIME ZONE
+  * updated_at            TIMESTAMP WITH TIME ZONE
+
+--------------------------------------------------------------------------------
+TABLE 4: official_accounts
+Model:   App\Models\OfficialAccount
+Purpose: Authorized barangay officials and DRRM officers login accounts.
+Columns:
+  * id                    SERIAL PRIMARY KEY
+  * username              VARCHAR(100) UNIQUE NOT NULL (e.g., 'Buangadmin.gov')
+  * password_hash         VARCHAR(255) NOT NULL (Bcrypt hashed)
+  * barangay              VARCHAR(50) NOT NULL ('Buang' or 'Nagsipit')
+  * official_name         VARCHAR(150) NOT NULL
+  * position              VARCHAR(150) NOT NULL
+  * phone                 VARCHAR(50) NOT NULL
+  * security_question     TEXT NOT NULL
+  * security_answer       TEXT NOT NULL
+  * created_at            TIMESTAMP WITH TIME ZONE
+  * updated_at            TIMESTAMP WITH TIME ZONE
+
+--------------------------------------------------------------------------------
+TABLE 5: activity_logs
+Model:   App\Models\ActivityLog
+Purpose: Audit trail of operational activities, logins, and status updates.
+Columns:
+  * id                    VARCHAR(60) PRIMARY KEY
+  * timestamp             TIMESTAMP WITH TIME ZONE NOT NULL
+  * action_type           VARCHAR(50) NOT NULL ('LOGIN', 'STATUS_UPDATE', etc.)
+  * actor_name            VARCHAR(150) NOT NULL
+  * actor_role            VARCHAR(100) NOT NULL
+  * barangay              VARCHAR(50) NOT NULL ('Buang' or 'Nagsipit')
+  * target                VARCHAR(150) NOT NULL
+  * details               TEXT NOT NULL
+  * is_working_hours      BOOLEAN NOT NULL DEFAULT true
+  * work_shift_tag        VARCHAR(50) NOT NULL
+  * terminal              VARCHAR(100) DEFAULT 'Main Barangay Hall Terminal'
+  * created_at            TIMESTAMP WITH TIME ZONE
+
+--------------------------------------------------------------------------------
+TABLE 6: personal_access_tokens
+Purpose: Laravel Sanctum API authentication tokens for secure REST sessions.
+Columns:
+  * id                    BIGSERIAL PRIMARY KEY
+  * tokenable_type        VARCHAR(255) NOT NULL
+  * tokenable_id          BIGINT NOT NULL
+  * name                  VARCHAR(255) NOT NULL
+  * token                 VARCHAR(64) UNIQUE NOT NULL
+  * abilities             TEXT NULL
+  * last_used_at          TIMESTAMP WITH TIME ZONE
+  * expires_at            TIMESTAMP WITH TIME ZONE
+  * created_at            TIMESTAMP WITH TIME ZONE
+  * updated_at            TIMESTAMP WITH TIME ZONE
+
+--------------------------------------------------------------------------------
+TABLE 7: migrations
+Purpose: Internal Laravel system table tracking applied database migrations.
+Columns:
+  * id                    SERIAL PRIMARY KEY
+  * migration             VARCHAR(255) NOT NULL
+  * batch                 INTEGER NOT NULL
+
+
+================================================================================
+3. HOW TO VIEW DATABASE NAME & TABLES USING COMMANDS
+================================================================================
+
+--- METHOD A: Using Laravel Artisan (Easiest) ---
+Run in: c:\Users\King\Veryupdated thesis\laravel-backend
+
+1. View all table names in one quick command:
+    php artisan tinker --execute="dump(Illuminate\Support\Facades\Schema::getTableListing());"
+
+2. View database name, host, and port:
+    php artisan db:show
+
+3. View detailed columns of a specific table:
+    php artisan db:table households
+    php artisan db:table evacuation_centers
+    php artisan db:table relief_distributions
+    php artisan db:table official_accounts
+    php artisan db:table activity_logs
+
+
+--- METHOD B: Using PostgreSQL Command Line (psql) ---
+Run from PowerShell:
+
+1. List all databases in PostgreSQL:
+    & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -c "\l"
+
+2. List all tables in the "barangay_drrm" database:
+    & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d barangay_drrm -c "\dt"
+
+3. Inspect column definitions of the "households" table:
+    & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d barangay_drrm -c "\d+ households"
+
+4. Query all table names via SQL:
+    & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d barangay_drrm -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+
+
+================================================================================
+4. WORKING DIRECTORIES (IMPORTANT RULE)
+================================================================================
+
+* Always run PHP / ARTISAN commands inside:
+    cd "c:\Users\King\Veryupdated thesis\laravel-backend"
+
+* Always run NPM / VITE / REACT commands in the ROOT folder:
+    cd "c:\Users\King\Veryupdated thesis"
+
+* One-Click Launchers available in the root folder:
+    - start-all.bat      (Starts both Backend and Frontend together)
+    - start-backend.bat  (Starts Laravel API on Port 8000)
+    - start-frontend.bat (Starts React Vite on Port 3000)
+
+
+================================================================================
+5. HOW TO RUN PSQL ON WINDOWS
+================================================================================
+
+Because PostgreSQL bin is not in Windows system PATH by default, use the full path:
+
+To open interactive PostgreSQL shell:
+    & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d barangay_drrm
+
+To run a single SQL query directly from PowerShell:
+    & "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d barangay_drrm -c "SELECT id, head_of_family, barangay, status FROM households;"
+
+Password when prompted: admin
+
+
+================================================================================
+6. DATABASE MIGRATIONS & SEEDING COMMANDS
+================================================================================
+Run from: c:\Users\King\Veryupdated thesis\laravel-backend
+
+1. Check current status of all migration files:
+    php artisan migrate:status
+
+2. Run any new pending migrations:
+    php artisan migrate
+
+3. Rollback the last migration batch:
+    php artisan migrate:rollback
+
+4. Reset and re-create everything fresh with initial seed data:
+    php artisan migrate:fresh --seed
+
+5. Run seeders only (without wiping data):
+    php artisan db:seed
+
+6. Show PostgreSQL database summary (connection, version, size):
+    php artisan db:show
+
+
+================================================================================
+7. HOUSEHOLD CRUD GUIDE (via php artisan tinker)
+================================================================================
+First, enter the interactive shell:
+    cd "c:\Users\King\Veryupdated thesis\laravel-backend"
+    php artisan tinker
+
+--- R: READ (VIEW DATA) ---
+
+1. View all household IDs and Head of Family names:
+    App\Models\Household::pluck('head_of_family', 'id');
+
+2. View key columns of all households:
+    App\Models\Household::all(['id', 'head_of_family', 'barangay', 'purok', 'status', 'contact_number'])->toArray();
+
+3. View a single household by ID:
+    $h = App\Models\Household::find('hh-buang-1');
+    echo $h->head_of_family . " | " . $h->status . " | " . $h->contact_number;
+
+4. View individual family members inside a household:
+    $h = App\Models\Household::find('hh-buang-1');
+    $h->family_members;
+
+5. View special needs tags (Senior, Infant, PWD, Pregnant):
+    $h = App\Models\Household::find('hh-buang-1');
+    $h->special_needs;
+
+6. Filter households by Barangay ('Buang' or 'Nagsipit'):
+    App\Models\Household::where('barangay', 'Buang')->get(['id', 'head_of_family', 'purok']);
+    App\Models\Household::where('barangay', 'Nagsipit')->get(['id', 'head_of_family', 'purok']);
+
+7. Filter households by Alert Status ('EMERGENCY', 'MODERATE', 'SAFE'):
+    App\Models\Household::where('status', 'EMERGENCY')->get(['id', 'head_of_family', 'status_note']);
+    App\Models\Household::where('status', 'SAFE')->get(['id', 'head_of_family']);
+
+8. Count households:
+    App\Models\Household::count();
+    App\Models\Household::where('status', 'EMERGENCY')->count();
+    App\Models\Household::where('verification_status', 'Verified')->count();
+
+
+--- C: CREATE (ADD A NEW HOUSEHOLD) ---
+
+App\Models\Household::create([
+    'id' => 'hh-buang-2',
+    'head_of_family' => 'Maria Dela Cruz',
+    'birthday' => '1988-08-20',
+    'age' => 38,
+    'contact_number' => '0919-123-4567',
+    'number_of_members' => 3,
+    'house_number' => '45-B',
+    'purok' => 'Purok 2',
+    'barangay' => 'Buang',
+    'complete_address' => '45-B Hillside, Purok 2, Buang, Albay',
+    'location' => ['lat' => 13.3440, 'lng' => 123.6980],
+    'status' => 'SAFE',
+    'status_note' => 'Family safe at home, supplies adequate.',
+    'evacuation_center_id' => null,
+    'verification_status' => 'Verified',
+    'special_needs' => ['Senior'],
+    'family_members' => [
+        ['id' => 'fm-1', 'name' => 'Maria Dela Cruz', 'age' => 38, 'relationship' => 'Head of Family', 'specialCategory' => 'None'],
+        ['id' => 'fm-2', 'name' => 'Juan Dela Cruz', 'age' => 40, 'relationship' => 'Spouse', 'specialCategory' => 'None'],
+        ['id' => 'fm-3', 'name' => 'Elena Dela Cruz', 'age' => 68, 'relationship' => 'Mother', 'specialCategory' => 'Senior'],
+    ],
+    'last_status_update' => now(),
+]);
+
+
+--- U: UPDATE (MODIFY AN EXISTING HOUSEHOLD) ---
+
+1. Change Alert Status (SAFE -> EMERGENCY):
+    $h = App\Models\Household::find('hh-buang-1');
+    $h->update([
+        'status' => 'SAFE',
+        'status_note' => 'Floodwaters receded; situation stabilized.',
+        'last_status_update' => now(),
+    ]);
+
+2. Update contact number or address:
+    $h = App\Models\Household::find('hh-buang-1');
+    $h->contact_number = '0999-888-7777';
+    $h->complete_address = 'Updated Address, Purok 1, Buang';
+    $h->save();
+
+3. Assign household to an Evacuation Center:
+    $h = App\Models\Household::find('hh-buang-1');
+    $h->evacuation_center_id = 'center-buang-1';
+    $h->save();
+    // Update live count on evacuation center:
+    App\Models\EvacuationCenter::find('center-buang-1')->recalculateAssignedCount();
+
+4. Approve / Verify a household:
+    $h = App\Models\Household::find('hh-buang-1');
+    $h->update(['verification_status' => 'Verified']);
+
+
+--- D: DELETE (REMOVE A HOUSEHOLD) ---
+
+1. Delete by ID directly:
+    App\Models\Household::destroy('hh-buang-2');
+
+2. Delete using instance:
+    $h = App\Models\Household::find('hh-buang-2');
+    if ($h) { $h->delete(); echo "Deleted"; }
+
+
+================================================================================
+8. EVACUATION CENTER CRUD COMMANDS
+================================================================================
+In Tinker:
+
+1. View all evacuation centers and current occupancy:
+    App\Models\EvacuationCenter::all(['id', 'name', 'barangay', 'capacity_families', 'assigned_count', 'status'])->toArray();
+
+2. Find centers with open capacity:
+    App\Models\EvacuationCenter::where('status', 'Open')->get(['id', 'name', 'capacity_families', 'assigned_count']);
+
+3. Add a new evacuation center:
+    App\Models\EvacuationCenter::create([
+        'id' => 'center-buang-2',
+        'name' => 'Buang Elementary School Gymnasium',
+        'barangay' => 'Buang',
+        'purok' => 'Purok 1',
+        'capacity_families' => 35,
+        'assigned_count' => 0,
+        'location' => ['lat' => 13.3450, 'lng' => 123.6990],
+        'manager_name' => 'Principal Roberto Tan',
+        'manager_contact' => '0917-000-1122',
+        'status' => 'Open',
+        'facilities' => ['Clean Water', 'Generator', 'Restrooms', 'Kitchen'],
+    ]);
+
+4. Update status to Full or Standby:
+    $c = App\Models\EvacuationCenter::find('center-buang-1');
+    $c->status = 'Full';
+    $c->save();
+
+5. Delete an evacuation center:
+    App\Models\EvacuationCenter::destroy('center-buang-2');
+
+
+================================================================================
+9. RELIEF GOODS DISTRIBUTION CRUD COMMANDS
+================================================================================
+In Tinker:
+
+1. View all logged relief distributions:
+    App\Models\ReliefDistribution::all(['id', 'recipient_name', 'item', 'qty', 'barangay', 'distributed_at'])->toArray();
+
+2. Log a new relief distribution:
+    App\Models\ReliefDistribution::create([
+        'id' => 'relief-' . uniqid(),
+        'household_id' => 'hh-buang-1',
+        'recipient_name' => 'Pedro M. Penduko',
+        'barangay' => 'Buang',
+        'purok' => 'Purok 1',
+        'item' => 'Family Food Pack (5kg Rice, Canned Goods, Noodles)',
+        'qty' => '1 Pack',
+        'location' => 'Barangay Hall Ground',
+        'distributed_at' => now(),
+        'officer_name' => 'Hon. Rolando M. Santos',
+        'notes' => 'Priority distribution for flood-affected family',
+    ]);
+
+3. View distributions for a specific household:
+    $h = App\Models\Household::find('hh-buang-1');
+    $h->reliefDistributions;
+
+4. Delete a relief log:
+    App\Models\ReliefDistribution::where('household_id', 'hh-buang-1')->delete();
+
+
+================================================================================
+10. OFFICIAL ACCOUNTS & AUTHENTICATION
+================================================================================
+In Tinker:
+
+1. List official administrator accounts:
+    App\Models\OfficialAccount::all(['id', 'username', 'barangay', 'official_name', 'position'])->toArray();
+
+2. Default login credentials:
+    - Buang Admin:
+        Username: Buangadmin.gov
+        Password: buang123
+    - Nagsipit Admin:
+        Username: Nagsipitadmin.gov
+        Password: Nagsipit123
+
+3. Reset or change an administrator password:
+    $admin = App\Models\OfficialAccount::where('username', 'Buangadmin.gov')->first();
+    $admin->password_hash = Hash::make('newpassword123');
+    $admin->save();
+
+
+================================================================================
+11. OPERATIONAL ACTIVITY & AUDIT LOGS
+================================================================================
+In Tinker:
+
+1. View the latest 5 audit entries:
+    App\Models\ActivityLog::latest()->take(5)->get(['timestamp', 'actor_name', 'action_type', 'target', 'details'])->toArray();
+
+2. Record a custom operational log:
+    App\Models\ActivityLog::record(
+        'STATUS_UPDATE',
+        'Hon. Rolando M. Santos',
+        'Punong Barangay',
+        'Buang',
+        'Purok 1 River Monitoring',
+        'Water level inspection completed. Stable condition.'
+    );
+
+3. Clear older logs if needed:
+    // Delete logs older than 30 days:
+    App\Models\ActivityLog::where('timestamp', '<', now()->subDays(30))->delete();
+
+
+================================================================================
+12. QUICK ONE-LINE POWERSHELL COMMANDS (WITHOUT ENTERING TINKER)
+================================================================================
+Run directly from PowerShell inside c:\Users\King\Veryupdated thesis\laravel-backend:
+
+# View households:
+php artisan tinker --execute="dump(App\Models\Household::all(['id', 'head_of_family', 'barangay', 'status'])->toArray());"
+
+# View evacuation centers:
+php artisan tinker --execute="dump(App\Models\EvacuationCenter::all(['id', 'name', 'capacity_families', 'assigned_count'])->toArray());"
+
+# View official accounts:
+php artisan tinker --execute="dump(App\Models\OfficialAccount::all(['id', 'username', 'official_name'])->toArray());"
+
+# View latest 3 logs:
+php artisan tinker --execute="dump(App\Models\ActivityLog::latest()->take(3)->get(['timestamp', 'action_type', 'details'])->toArray());"
+
+# Check database connection & counts:
+php artisan tinker --execute="echo 'DB: ' . config('database.default') . ' | DB Name: ' . config('database.connections.pgsql.database') . ' | Households: ' . App\Models\Household::count() . ' | Centers: ' . App\Models\EvacuationCenter::count();"
+
+
+================================================================================
+13. SYSTEM MAINTENANCE & CACHE CLEARING COMMANDS
+================================================================================
+Run from: c:\Users\King\Veryupdated thesis\laravel-backend
+
+1. Clear all application caches (config, routes, views):
+    php artisan optimize:clear
+
+2. List all available API endpoints:
+    php artisan route:list --path=api
+
+3. Start Laravel Backend API server:
+    php artisan serve --port=8000
+
+4. Generate a new application encryption key (if ever needed):
+    php artisan key:generate
+
+================================================================================
+END OF GUIDE
+================================================================================

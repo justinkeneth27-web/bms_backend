@@ -1,0 +1,802 @@
+{
+  "info": {
+    "_postman_id": "8b6c17a2-89f8-4a67-9ef4-726d8bf1e47c",
+    "name": "Barangay DRRM Operations API",
+    "description": "Postman collection for the Laravel Barangay DRRM backend. Set baseUrl to the API root (default: http://127.0.0.1:8000/api/v1). Most routes are currently public; logout and current-user require a Sanctum bearer token. Legacy authentication aliases under /api/auth are also included.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/api/v1"
+    },
+    {
+      "key": "legacyAuthUrl",
+      "value": "http://127.0.0.1:8000/api/auth"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "barangay",
+      "value": "Buang"
+    },
+    {
+      "key": "householdId",
+      "value": "hh-buang-1"
+    },
+    {
+      "key": "centerId",
+      "value": "center-buang-1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"your-official-username\",\n  \"password\": \"your-password\",\n  \"barangay\": \"{{barangay}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "On success, stores the returned Sanctum token in the collection variable `token`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.token) pm.collectionVariables.set('token', body.token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get password security question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"your-official-username\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/security-question",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "security-question"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reset password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"your-official-username\",\n  \"securityAnswer\": \"your-security-answer\",\n  \"newPassword\": \"new-password-at-least-6-chars\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout (requires token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get authenticated official (requires token)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "user"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Legacy auth aliases (without /v1)",
+          "item": [
+            {
+              "name": "Legacy login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"your-official-username\",\n  \"password\": \"your-password\",\n  \"barangay\": \"{{barangay}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{legacyAuthUrl}}/login",
+                  "host": [
+                    "{{legacyAuthUrl}}"
+                  ],
+                  "path": [
+                    "login"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Legacy get security question",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"your-official-username\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{legacyAuthUrl}}/security-question",
+                  "host": [
+                    "{{legacyAuthUrl}}"
+                  ],
+                  "path": [
+                    "security-question"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Legacy reset password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"your-official-username\",\n  \"securityAnswer\": \"your-security-answer\",\n  \"newPassword\": \"new-password-at-least-6-chars\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{legacyAuthUrl}}/reset-password",
+                  "host": [
+                    "{{legacyAuthUrl}}"
+                  ],
+                  "path": [
+                    "reset-password"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Officials",
+      "item": [
+        {
+          "name": "List officials",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/officials?barangay={{barangay}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "officials"
+              ],
+              "query": [
+                {
+                  "key": "barangay",
+                  "value": "{{barangay}}",
+                  "description": "Optional barangay filter (Buang or Nagsipit)."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create official account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"new-official-username\",\n  \"password\": \"password-at-least-6-chars\",\n  \"barangay\": \"{{barangay}}\",\n  \"officialName\": \"Juan Dela Cruz\",\n  \"position\": \"DRRM Officer\",\n  \"phone\": \"09170000000\",\n  \"securityQuestion\": \"What is your barangay?\",\n  \"securityAnswer\": \"Buang\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/officials",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "officials"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Households",
+      "item": [
+        {
+          "name": "List households",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/households?barangay={{barangay}}&purok=All%20Puroks&status=ALL&verification=ALL&search=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households"
+              ],
+              "query": [
+                {
+                  "key": "barangay",
+                  "value": "{{barangay}}"
+                },
+                {
+                  "key": "purok",
+                  "value": "All Puroks",
+                  "description": "Use All Puroks to skip the purok filter."
+                },
+                {
+                  "key": "status",
+                  "value": "ALL",
+                  "description": "SAFE, MODERATE, EMERGENCY, or ALL."
+                },
+                {
+                  "key": "verification",
+                  "value": "ALL",
+                  "description": "Pending, Verified, or ALL."
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional search across head of family, ID, contact number, and address."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register household",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"headOfFamily\": \"Juan Dela Cruz\",\n  \"birthday\": \"1985-03-12\",\n  \"age\": 41,\n  \"contactNumber\": \"09171234567\",\n  \"numberOfMembers\": 4,\n  \"houseNumber\": \"12-A\",\n  \"purok\": \"Purok 1\",\n  \"barangay\": \"{{barangay}}\",\n  \"completeAddress\": \"12-A, Purok 1, Buang, Albay\",\n  \"location\": {\n    \"lat\": 13.3421,\n    \"lng\": 123.698\n  },\n  \"status\": \"SAFE\",\n  \"statusNote\": \"\",\n  \"evacuationCenterId\": null,\n  \"verificationStatus\": \"Pending\",\n  \"specialNeeds\": [],\n  \"familyMembers\": [\n    {\n      \"id\": \"member-1\",\n      \"name\": \"Juan Dela Cruz\",\n      \"age\": 41,\n      \"relationship\": \"Head of Family\",\n      \"specialCategory\": \"None\"\n    }\n  ],\n  \"officerName\": \"Barangay DRRM Desk\",\n  \"officerRole\": \"DRRM Officer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/households",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households"
+              ]
+            },
+            "description": "The `id` field is optional; if omitted, the API generates one."
+          }
+        },
+        {
+          "name": "Update household status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"MODERATE\",\n  \"statusNote\": \"Water level rising; monitor the household.\",\n  \"evacuationCenterId\": null,\n  \"officerName\": \"Juan Dela Cruz\",\n  \"officerRole\": \"Duty Officer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/households/{{householdId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households",
+                "{{householdId}}",
+                "status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete household",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"officerName\": \"Barangay Administrator\",\n  \"officerRole\": \"Super Admin\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/households/{{householdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "households",
+                "{{householdId}}"
+              ]
+            },
+            "description": "Permanently deletes the household and its associated relief distribution records."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evacuation centers",
+      "item": [
+        {
+          "name": "List evacuation centers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/evacuation-centers?barangay={{barangay}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evacuation-centers"
+              ],
+              "query": [
+                {
+                  "key": "barangay",
+                  "value": "{{barangay}}",
+                  "description": "Optional barangay filter."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Assign household to center",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"householdId\": \"{{householdId}}\",\n  \"officerName\": \"Juan Dela Cruz\",\n  \"officerRole\": \"Evacuation Officer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evacuation-centers/{{centerId}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "evacuation-centers",
+                "{{centerId}}",
+                "assign"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Relief distributions",
+      "item": [
+        {
+          "name": "List relief distributions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/relief-distributions?barangay={{barangay}}&household_id={{householdId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "relief-distributions"
+              ],
+              "query": [
+                {
+                  "key": "barangay",
+                  "value": "{{barangay}}"
+                },
+                {
+                  "key": "household_id",
+                  "value": "{{householdId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Record relief distribution",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"householdId\": \"{{householdId}}\",\n  \"item\": \"Food pack\",\n  \"qty\": \"1 pack\",\n  \"location\": \"Barangay Hall\",\n  \"officerName\": \"Juan Dela Cruz\",\n  \"notes\": \"Initial distribution\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/relief-distributions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "relief-distributions"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Activity logs",
+      "item": [
+        {
+          "name": "List activity logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/activity-logs?barangay={{barangay}}&action_type=ALL&shift=ALL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activity-logs"
+              ],
+              "query": [
+                {
+                  "key": "barangay",
+                  "value": "{{barangay}}"
+                },
+                {
+                  "key": "action_type",
+                  "value": "ALL",
+                  "description": "Optional action type; ALL disables this filter."
+                },
+                {
+                  "key": "shift",
+                  "value": "ALL",
+                  "description": "WORKING, OFF_HOURS, or ALL."
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create activity log",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actionType\": \"DRILL\",\n  \"actorName\": \"Juan Dela Cruz\",\n  \"actorRole\": \"DRRM Officer\",\n  \"barangay\": \"{{barangay}}\",\n  \"target\": \"Evacuation drill\",\n  \"details\": \"Completed scheduled evacuation drill.\",\n  \"terminal\": \"Main Barangay Hall Terminal\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/activity-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activity-logs"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export activity logs as CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/csv"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/activity-logs/export-csv?barangay={{barangay}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "activity-logs",
+                "export-csv"
+              ],
+              "query": [
+                {
+                  "key": "barangay",
+                  "value": "{{barangay}}",
+                  "description": "Use All to export all barangays."
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
