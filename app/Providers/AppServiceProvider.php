@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +22,48 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Configure rate limiters for DDoS mitigation and brute-force prevention.
+     */
+    protected function configureRateLimiting(): void
+    {
+        // 1. General API Rate Limiter: 300 requests/minute per IP
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(300)->by($request->ip() ?? 'unknown')->response(function (Request $request, array $headers) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Rate Limit Exceeded',
+                    'message' => 'DDoS Protection: You have exceeded the permitted request rate. Please slow down.',
+                    'retry_after' => $headers['Retry-After'] ?? 60,
+                ], 429, $headers);
+            });
+        });
+
+        // 2. Strict Authentication Limiter: 20 attempts/minute per IP (anti-brute force / credential stuffing)
+        RateLimiter::for('auth-strict', function (Request $request) {
+            return Limit::perMinute(20)->by($request->ip() ?? 'unknown')->response(function (Request $request, array $headers) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Too Many Authentication Attempts',
+                    'message' => 'Security Guard: Maximum login/auth attempts exceeded (20/minute). Please wait before trying again.',
+                    'retry_after' => $headers['Retry-After'] ?? 60,
+                ], 429, $headers);
+            });
+        });
+
+        // 3. Write/Mutation Limiter: 120 write requests/minute per IP (prevents DB write-flooding)
+        RateLimiter::for('api-write', function (Request $request) {
+            return Limit::perMinute(120)->by($request->ip() ?? 'unknown')->response(function (Request $request, array $headers) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Write Rate Limit Exceeded',
+                    'message' => 'DDoS Protection: High write volume detected from your IP. Please try again shortly.',
+                    'retry_after' => $headers['Retry-After'] ?? 60,
+                ], 429, $headers);
+            });
+        });
     }
 }

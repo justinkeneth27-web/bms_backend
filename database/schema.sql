@@ -13,8 +13,7 @@ CREATE TABLE IF NOT EXISTS official_accounts (
     official_name VARCHAR(150) NOT NULL,
     position VARCHAR(150) NOT NULL,
     phone VARCHAR(50) NOT NULL,
-    security_question TEXT NOT NULL,
-    security_answer TEXT NOT NULL,
+    email VARCHAR(191),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

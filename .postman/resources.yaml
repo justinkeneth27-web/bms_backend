@@ -1,0 +1,7 @@
+# Use this workspace to collaborate
+workspace:
+  id: ef68e24d-f2c3-472e-8039-c1d9f576c8e6
+
+localResources:
+  collections:
+    - ../Barangay-DRRM-API.postman_collection.json

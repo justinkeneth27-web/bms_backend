@@ -18,7 +18,11 @@ class ReliefDistributionController extends Controller
     {
         $query = ReliefDistribution::query();
 
-        if ($request->filled('barangay')) {
+        // Server-Side Jurisdiction Query Scoping
+        $user = auth('sanctum')->user() ?: $request->user();
+        if ($user && !empty($user->barangay)) {
+            $query->where('barangay', $user->barangay);
+        } elseif ($request->filled('barangay')) {
             $query->where('barangay', $request->query('barangay'));
         }
 

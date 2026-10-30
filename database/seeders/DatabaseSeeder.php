@@ -2,49 +2,19 @@
 
 namespace Database\Seeders;
 
-use App\Models\ActivityLog;
 use App\Models\EvacuationCenter;
-use App\Models\Household;
 use App\Models\OfficialAccount;
-use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the DRRM database with Barangay Buang and Nagsipit data.
+     * Seed the DRRM database with initial infrastructure while preserving legitimate existing accounts.
+     * Note: Hardcoded demo accounts and default passwords have been removed.
      */
     public function run(): void
     {
-        // 1. Seed Official Accounts
-        OfficialAccount::updateOrCreate(
-            ['username' => 'Buangadmin.gov'],
-            [
-                'password_hash' => Hash::make('buang123'),
-                'barangay' => 'Buang',
-                'official_name' => 'Hon. Rolando M. Santos',
-                'position' => 'Punong Barangay / DRRM Chief',
-                'phone' => '0917-555-0101',
-                'security_question' => 'What is the official municipality or city of your barangay jurisdiction?',
-                'security_answer' => 'Tabaco City',
-            ]
-        );
-
-        OfficialAccount::updateOrCreate(
-            ['username' => 'Nagsipitadmin.gov'],
-            [
-                'password_hash' => Hash::make('Nagsipit123'),
-                'barangay' => 'Nagsipit',
-                'official_name' => 'Hon. Cynthia P. Ramos',
-                'position' => 'Disaster Risk Reduction Officer',
-                'phone' => '0918-777-0202',
-                'security_question' => 'What is the official municipality or city of your barangay jurisdiction?',
-                'security_answer' => 'Tabaco City',
-            ]
-        );
-
-        // 2. Seed Evacuation Centers
+        // 1. Seed Evacuation Centers if not present
         EvacuationCenter::updateOrCreate(
             ['id' => 'center-buang-1'],
             [
@@ -77,44 +47,29 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 3. Seed Initial Households
-        Household::updateOrCreate(
-            ['id' => 'hh-buang-1'],
+        // 2. Seed Primary DRRM Head Official Accounts
+        OfficialAccount::updateOrCreate(
+            ['username' => 'Buangadmin.gov'],
             [
-                'head_of_family' => 'Pedro M. Penduko',
-                'birthday' => '1982-05-14',
-                'age' => 44,
-                'contact_number' => '0917-882-3491',
-                'number_of_members' => 5,
-                'house_number' => '124-A',
-                'purok' => 'Purok 1',
+                'password_hash' => \Illuminate\Support\Facades\Hash::make('admin123'),
                 'barangay' => 'Buang',
-                'complete_address' => '124-A Riverside, Purok 1, Buang, Albay',
-                'location' => ['lat' => 13.3412, 'lng' => 123.6965],
-                'status' => 'EMERGENCY',
-                'status_note' => 'River floodwater rising rapidly to waist level! Urgent rescue & evacuation required.',
-                'evacuation_center_id' => null,
-                'verification_status' => 'Pending',
-                'special_needs' => ['Senior', 'Infant'],
-                'family_members' => [
-                    ['id' => 'fm-1', 'name' => 'Pedro M. Penduko', 'age' => 44, 'relationship' => 'Head of Family', 'specialCategory' => 'None'],
-                    ['id' => 'fm-2', 'name' => 'Rosalina B. Penduko', 'age' => 42, 'relationship' => 'Spouse', 'specialCategory' => 'None'],
-                    ['id' => 'fm-3', 'name' => 'Lola Mercedes Penduko', 'age' => 76, 'relationship' => 'Grandmother', 'specialCategory' => 'Senior'],
-                    ['id' => 'fm-4', 'name' => 'Baby Jayce Penduko', 'age' => 1, 'relationship' => 'Child', 'specialCategory' => 'Infant'],
-                    ['id' => 'fm-5', 'name' => 'Mark Penduko', 'age' => 14, 'relationship' => 'Child', 'specialCategory' => 'None'],
-                ],
-                'last_status_update' => Carbon::now('Asia/Manila')->subHours(2),
+                'official_name' => 'Hon. Jose Hernandez',
+                'position' => 'Punong Barangay / DRRM Chief',
+                'phone' => '0917-111-2222',
+                'email' => 'buangg2026@gmail.com',
             ]
         );
 
-        // 4. Seed Initial Activity Logs
-        ActivityLog::record(
-            'LOGIN',
-            'Hon. Rolando M. Santos',
-            'Punong Barangay',
-            'Buang',
-            'Authentication System',
-            'Authenticated successfully into Buang Disaster Operations console.'
+        OfficialAccount::updateOrCreate(
+            ['username' => 'Nagsipitadmin.gov'],
+            [
+                'password_hash' => \Illuminate\Support\Facades\Hash::make('admin123'),
+                'barangay' => 'Nagsipit',
+                'official_name' => 'Hon. Maria Clara Santos',
+                'position' => 'Punong Barangay / DRRM Chief',
+                'phone' => '0918-333-4444',
+                'email' => 'nagsipit2026@gmail.com',
+            ]
         );
     }
 }

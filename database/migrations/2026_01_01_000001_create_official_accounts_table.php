@@ -19,8 +19,7 @@ return new class extends Migration
             $table->string('official_name', 150);
             $table->string('position', 150);
             $table->string('phone', 50);
-            $table->text('security_question');
-            $table->text('security_answer');
+            $table->string('email', 191)->nullable();
             $table->rememberToken();
             $table->timestamps();
 

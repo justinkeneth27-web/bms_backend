@@ -17,7 +17,11 @@ class ActivityLogController extends Controller
     {
         $query = ActivityLog::query();
 
-        if ($request->filled('barangay')) {
+        // Server-Side Jurisdiction Query Scoping
+        $user = auth('sanctum')->user() ?: $request->user();
+        if ($user && !empty($user->barangay)) {
+            $query->where('barangay', $user->barangay);
+        } elseif ($request->filled('barangay')) {
             $query->where('barangay', $request->query('barangay'));
         }
 
@@ -99,9 +103,15 @@ class ActivityLogController extends Controller
      */
     public function exportCsv(Request $request): StreamedResponse
     {
-        $barangay = $request->query('barangay', 'All');
+        $user = auth('sanctum')->user() ?: $request->user();
+        if ($user && !empty($user->barangay)) {
+            $barangay = $user->barangay;
+        } else {
+            $barangay = $request->query('barangay', 'All');
+        }
+
         $query = ActivityLog::query();
-        if ($barangay !== 'All') {
+        if ($barangay !== 'All' && !empty($barangay)) {
             $query->where('barangay', $barangay);
         }
         $logs = $query->orderBy('timestamp', 'desc')->get();
