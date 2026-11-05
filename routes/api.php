@@ -74,6 +74,10 @@ $healthHandler = function () {
 // Health checks (Public system status)
 Route::get('/health', $healthHandler);
 
+// Dedicated Admin & User Endpoints (Root alias)
+Route::get('/admin', [AuthController::class, 'getAdminInfo']);
+Route::get('/user', [AuthController::class, 'getUserInfo']);
+
 // Authentication & Password Recovery (Strict 5 reqs/min limiter)
 Route::prefix('auth')->middleware('throttle:auth-strict')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -140,6 +144,15 @@ Route::prefix('v1')->middleware('throttle:api')->group(function () use ($healthH
     Route::get('/activity-logs', [ActivityLogController::class, 'index']);
     Route::post('/activity-logs', [ActivityLogController::class, 'store'])->middleware('throttle:api-write');
     Route::get('/activity-logs/export-csv', [ActivityLogController::class, 'exportCsv']);
+
+    // Dedicated Admin Endpoints
+    Route::get('/admin', [AuthController::class, 'getAdminInfo']);
+    Route::get('/admin/me', [AuthController::class, 'getAdminInfo']);
+
+    // Dedicated User / Resident Endpoints
+    Route::get('/user', [AuthController::class, 'getUserInfo']);
+    Route::get('/user/me', [AuthController::class, 'getUserInfo']);
+    Route::get('/resident/me', [AuthController::class, 'getUserInfo']);
 
     // Protected Routes (Session Verification)
     Route::middleware('auth:sanctum')->group(function () {

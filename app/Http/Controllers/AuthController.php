@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\EvacuationCenter;
 use App\Models\Household;
 use App\Models\HouseholdAccount;
 use App\Models\OfficialAccount;
+use App\Models\ReliefDistribution;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -572,6 +574,162 @@ class AuthController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Logged out successfully.']);
+    }
+
+    /**
+     * Dedicated Admin / Official Endpoint:
+     * Returns authenticated admin details, permissions, and barangay DRRM overview.
+     */
+    public function getAdminInfo(Request $request): JsonResponse
+    {
+        $sanctumUser = auth('sanctum')->user() ?: $request->user();
+        $account = null;
+
+        if ($sanctumUser instanceof OfficialAccount) {
+            $account = $sanctumUser;
+        } elseif ($request->filled('username')) {
+            $cleanUser = str_replace('.', '', strtolower(trim($request->query('username'))));
+            $account = OfficialAccount::where(function ($q) use ($request, $cleanUser) {
+                $q->where('username', $request->query('username'))
+                  ->orWhereRaw("LOWER(REPLACE(username, '.', '')) = ?", [$cleanUser]);
+            })->first();
+        }
+
+        $barangay = $account ? $account->barangay : ($request->query('barangay') ?? 'Buang');
+
+        // System overview statistics for admin
+        $totalHouseholds = Household::where('barangay', $barangay)->count();
+        $evacuatedCount = Household::where('barangay', $barangay)->where('evacuation_status', 'Evacuated')->count();
+        $needsEvacuateCount = Household::where('barangay', $barangay)->where('evacuation_status', 'Needs Evacuation')->count();
+        $centersCount = EvacuationCenter::where('barangay', $barangay)->count();
+        $reliefCount = ReliefDistribution::where('barangay', $barangay)->count();
+
+        if ($account) {
+            $isPrimaryHead = strcasecmp($account->position, 'Punong Barangay / DRRM Chief') === 0 ||
+                             str_contains(strtolower($account->position), 'punong barangay') ||
+                             str_contains(strtolower($account->position), 'chief');
+
+            return response()->json([
+                'success' => true,
+                'role' => 'admin',
+                'admin' => [
+                    'id' => (string) $account->id,
+                    'username' => $account->username,
+                    'officialName' => $account->official_name,
+                    'position' => $account->position,
+                    'barangay' => $account->barangay,
+                    'phone' => $account->phone ?? '',
+                    'email' => $account->email ?? '',
+                    'isPrimaryHead' => $isPrimaryHead,
+                    'permissions' => [
+                        'manage_accounts' => $isPrimaryHead,
+                        'manage_households' => true,
+                        'manage_evacuation_centers' => true,
+                        'manage_relief' => true,
+                        'broadcast_alerts' => true,
+                        'view_audit_logs' => true,
+                    ],
+                ],
+                'overview' => [
+                    'barangay' => $barangay,
+                    'totalHouseholds' => $totalHouseholds,
+                    'evacuatedHouseholds' => $evacuatedCount,
+                    'needsEvacuationHouseholds' => $needsEvacuateCount,
+                    'evacuationCenters' => $centersCount,
+                    'reliefDistributions' => $reliefCount,
+                ],
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'role' => 'admin',
+            'message' => 'Barangay DRRM Administrator Endpoint. Pass Bearer token or ?username=... for personalized admin session.',
+            'overview' => [
+                'barangay' => $barangay,
+                'totalHouseholds' => $totalHouseholds,
+                'evacuatedHouseholds' => $evacuatedCount,
+                'needsEvacuationHouseholds' => $needsEvacuateCount,
+                'evacuationCenters' => $centersCount,
+                'reliefDistributions' => $reliefCount,
+            ],
+            'endpoints' => [
+                'login' => 'POST /api/v1/auth/login',
+                'officials' => 'GET /api/v1/officials',
+                'households' => 'GET /api/v1/households',
+                'evacuationCenters' => 'GET /api/v1/evacuation-centers',
+                'reliefDistributions' => 'GET /api/v1/relief-distributions',
+                'activityLogs' => 'GET /api/v1/activity-logs',
+            ],
+        ]);
+    }
+
+    /**
+     * Dedicated User / Resident Endpoint:
+     * Returns authenticated resident profile, linked household details, and safety status.
+     */
+    public function getUserInfo(Request $request): JsonResponse
+    {
+        $sanctumUser = auth('sanctum')->user() ?: $request->user();
+        $account = null;
+
+        if ($sanctumUser instanceof HouseholdAccount) {
+            $account = $sanctumUser;
+        } elseif ($request->filled('email')) {
+            $cleanEmail = strtolower(trim($request->query('email')));
+            $account = HouseholdAccount::whereRaw('LOWER(email) = ?', [$cleanEmail])->first();
+        } elseif ($request->filled('householdId')) {
+            $account = HouseholdAccount::where('household_id', $request->query('householdId'))->first();
+        }
+
+        if ($account) {
+            $household = $account->household;
+            if (!$household && !empty($account->household_id)) {
+                $household = Household::find($account->household_id);
+            }
+
+            return response()->json([
+                'success' => true,
+                'role' => 'resident',
+                'user' => [
+                    'id' => (string) $account->id,
+                    'email' => $account->email,
+                    'headOfFamily' => $account->head_of_family,
+                    'barangay' => $account->barangay,
+                    'contactNumber' => $account->contact_number ?? '',
+                    'householdId' => $account->household_id ?? '',
+                ],
+                'household' => $household ? [
+                    'id' => $household->id,
+                    'headOfFamily' => $household->head_of_family,
+                    'purok' => $household->purok,
+                    'barangay' => $household->barangay,
+                    'evacuationStatus' => $household->evacuation_status,
+                    'familyMembersCount' => $household->family_members_count,
+                    'assignedCenterId' => $household->assigned_evacuation_center_id,
+                    'assignedCenterName' => $household->assigned_evacuation_center_name,
+                    'reliefPacksReceived' => $household->relief_packs_received ?? 0,
+                    'vulnerable' => [
+                        'pregnant' => (int) ($household->pregnant_count ?? 0),
+                        'lactating' => (int) ($household->lactating_count ?? 0),
+                        'pwd' => (int) ($household->pwd_count ?? 0),
+                        'elderly' => (int) ($household->elderly_count ?? 0),
+                        'infants' => (int) ($household->infant_count ?? 0),
+                    ],
+                ] : null,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'role' => 'resident',
+            'message' => 'Resident User Endpoint. Authenticate via Bearer token (from /api/v1/auth/resident/login) or pass ?email=... to query resident profile.',
+            'endpoints' => [
+                'login' => 'POST /api/v1/auth/resident/login',
+                'register' => 'POST /api/v1/auth/resident/register',
+                'profile' => 'GET /api/v1/user/me',
+            ],
+        ]);
     }
 
     /**

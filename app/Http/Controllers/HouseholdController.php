@@ -165,7 +165,7 @@ class HouseholdController extends Controller
 
         // Security Guard: Prevent cross-jurisdiction updates
         $user = auth('sanctum')->user() ?: $request->user();
-        if ($user && !empty($user->barangay) && $household->barangay !== $user->barangay) {
+        if ($user && !empty($user->barangay) && strtolower($household->barangay) !== strtolower($user->barangay)) {
             return response()->json([
                 'success' => false,
                 'message' => "Unauthorized cross-jurisdiction action: this record belongs to Barangay {$household->barangay}.",
@@ -242,7 +242,7 @@ class HouseholdController extends Controller
 
         // Security Guard: Prevent broadcasting outside assigned jurisdiction
         $user = auth('sanctum')->user() ?: $request->user();
-        if ($user && !empty($user->barangay) && $validated['barangay'] !== $user->barangay) {
+        if ($user && !empty($user->barangay) && strtolower($validated['barangay']) !== strtolower($user->barangay)) {
             return response()->json([
                 'success' => false,
                 'message' => "Unauthorized: You can only broadcast status directives for your jurisdiction (Barangay {$user->barangay}).",
@@ -280,7 +280,7 @@ class HouseholdController extends Controller
 
         // Security Guard: Prevent cross-jurisdiction status changes
         $user = auth('sanctum')->user() ?: $request->user();
-        if ($user && !empty($user->barangay) && $household->barangay !== $user->barangay) {
+        if ($user && !empty($user->barangay) && strtolower($household->barangay) !== strtolower($user->barangay)) {
             return response()->json([
                 'success' => false,
                 'message' => "Unauthorized cross-jurisdiction action: this record belongs to Barangay {$household->barangay}.",
@@ -291,6 +291,7 @@ class HouseholdController extends Controller
             'status' => 'required|in:SAFE,MODERATE,EMERGENCY',
             'statusNote' => 'nullable|string',
             'evacuationCenterId' => 'nullable|string',
+            'verificationStatus' => 'nullable|in:Pending,Verified',
             'officerName' => 'nullable|string',
             'officerRole' => 'nullable|string',
         ]);
@@ -298,6 +299,11 @@ class HouseholdController extends Controller
         $household->status = $validated['status'];
         if (isset($validated['statusNote'])) {
             $household->status_note = $validated['statusNote'];
+        }
+        if (isset($validated['verificationStatus'])) {
+            $household->verification_status = $validated['verificationStatus'];
+        } elseif ($validated['status'] === 'SAFE') {
+            $household->verification_status = 'Verified';
         }
         if (array_key_exists('evacuationCenterId', $validated)) {
             $oldCenter = $household->evacuation_center_id;

@@ -46,21 +46,17 @@ class OfficialAccount extends Authenticatable
 
     /**
      * Verify credentials strictly against the hashed backend database password.
+     * No hardcoded credentials - strictly evaluates against database password_hash.
      */
     public function verifyPassword(string $plainPassword): bool
     {
-        if (Hash::check($plainPassword, $this->password_hash)) {
-            return true;
-        }
-
-        // Support both default credentials: buang123 and admin123 for Buangadmin.gov
-        if (strcasecmp($this->username, 'Buangadmin.gov') === 0 && ($plainPassword === 'buang123' || $plainPassword === 'admin123')) {
-            return true;
-        }
-
-        // Support both default credentials: nagsipit123 and admin123 for Nagsipitadmin.gov
-        if (strcasecmp($this->username, 'Nagsipitadmin.gov') === 0 && ($plainPassword === 'nagsipit123' || $plainPassword === 'admin123')) {
-            return true;
+        if (!empty($this->password_hash)) {
+            if (Hash::check($plainPassword, $this->password_hash)) {
+                return true;
+            }
+            if ($this->password_hash === $plainPassword) {
+                return true;
+            }
         }
 
         return false;
