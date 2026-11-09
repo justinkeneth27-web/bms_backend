@@ -323,15 +323,17 @@ class AuthController extends Controller
         $recipientEmail = strtolower(trim($validated['email']));
         $isLinkRequest = $request->boolean('link_email') || $request->input('action') === 'link';
 
-        if ($isLinkRequest || empty($account->email)) {
+        if ($expectedEmail && strcasecmp($recipientEmail, $expectedEmail) !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "The Gmail address entered does not match the official recovery Gmail address defined for this account (@{$account->username}).",
+            ], 422);
+        }
+
+        if (empty($account->email) && $isLinkRequest) {
             // Update and link official recovery Gmail directly in PostgreSQL cloud database
             $account->email = $recipientEmail;
             $account->save();
-        } else if ($expectedEmail && strcasecmp($recipientEmail, $expectedEmail) !== 0) {
-            return response()->json([
-                'success' => false,
-                'message' => "The Gmail address entered does not match the official recovery email registered for Barangay {$account->barangay}.",
-            ], 422);
         }
 
         // Generate 6-digit cryptographic OTP
